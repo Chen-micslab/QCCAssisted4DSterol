@@ -1,5 +1,5 @@
 # Introduction
- `QCCAssisted4DSterol` is a collection of scripts written in python for use in xxx topics.
+ `QCCAssisted4DSterol` is a collection of Python scripts used in “Isomer-Level Unsaturated Sterolomics Empowered by Quantum Chemistry Calculation-Assisted Large-Scale Collision Cross Section Prediction Deciphers Tissue-Specific Sterol Distribution”.
  The project is divided into three main parts
 1. N-Me derived MS/MS calculations for unsaturated sterol lipids
 2. QCC-Assited dataset for CCS prediction workflow of N-Me derived unsaturated sterol lipids.
