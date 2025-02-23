@@ -1,0 +1,25 @@
+params,mean_score
+"{'regressor__C': 300, 'regressor__gamma': 0.001, 'regressor__kernel': 'rbf'}",-4.117584605985077
+"{'regressor__C': 100, 'regressor__gamma': 0.001, 'regressor__kernel': 'rbf'}",-4.2003363439424355
+"{'regressor__C': 500, 'regressor__gamma': 0.001, 'regressor__kernel': 'rbf'}",-4.2193209047031335
+"{'regressor__C': 300, 'regressor__gamma': 0.01, 'regressor__kernel': 'rbf'}",-6.696911343825299
+"{'regressor__C': 100, 'regressor__gamma': 0.01, 'regressor__kernel': 'rbf'}",-6.722154286761305
+"{'regressor__C': 500, 'regressor__gamma': 0.01, 'regressor__kernel': 'rbf'}",-6.722462884013651
+"{'regressor__C': 100, 'regressor__gamma': 0.1, 'regressor__kernel': 'rbf'}",-12.626442825955305
+"{'regressor__C': 500, 'regressor__gamma': 0.1, 'regressor__kernel': 'rbf'}",-12.66736517264285
+"{'regressor__C': 300, 'regressor__gamma': 0.1, 'regressor__kernel': 'rbf'}",-12.668951009801447
+"{'regressor__C': 300, 'regressor__gamma': 1, 'regressor__kernel': 'rbf'}",-19.43893114413848
+"{'regressor__C': 100, 'regressor__gamma': 1, 'regressor__kernel': 'rbf'}",-19.43893114413848
+"{'regressor__C': 500, 'regressor__gamma': 1, 'regressor__kernel': 'rbf'}",-19.43893114413848
+"{'regressor__C': 0.1, 'regressor__gamma': 0.01, 'regressor__kernel': 'rbf'}",-20.056752203589753
+"{'regressor__C': 0.1, 'regressor__gamma': 0.1, 'regressor__kernel': 'rbf'}",-20.109341641588617
+"{'regressor__C': 0.1, 'regressor__gamma': 0.001, 'regressor__kernel': 'rbf'}",-20.22711490412707
+"{'regressor__C': 0.01, 'regressor__gamma': 0.01, 'regressor__kernel': 'rbf'}",-20.249970588529575
+"{'regressor__C': 0.01, 'regressor__gamma': 0.1, 'regressor__kernel': 'rbf'}",-20.255073855314713
+"{'regressor__C': 0.1, 'regressor__gamma': 1, 'regressor__kernel': 'rbf'}",-20.257756119123414
+"{'regressor__C': 0.01, 'regressor__gamma': 0.001, 'regressor__kernel': 'rbf'}",-20.267060321961477
+"{'regressor__C': 0.001, 'regressor__gamma': 0.01, 'regressor__kernel': 'rbf'}",-20.269345999452142
+"{'regressor__C': 0.001, 'regressor__gamma': 0.1, 'regressor__kernel': 'rbf'}",-20.269854770253147
+"{'regressor__C': 0.01, 'regressor__gamma': 1, 'regressor__kernel': 'rbf'}",-20.27008117152366
+"{'regressor__C': 0.001, 'regressor__gamma': 0.001, 'regressor__kernel': 'rbf'}",-20.27105537048695
+"{'regressor__C': 0.001, 'regressor__gamma': 1, 'regressor__kernel': 'rbf'}",-20.27135738035722

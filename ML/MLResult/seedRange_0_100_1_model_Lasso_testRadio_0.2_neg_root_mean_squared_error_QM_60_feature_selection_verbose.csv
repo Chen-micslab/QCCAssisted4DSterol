@@ -1,0 +1,7 @@
+params,mean_score
+{'regressor__alpha': 1},-6.579463500885401
+{'regressor__alpha': 10},-11.595352013543845
+{'regressor__alpha': 0.1},-14.845685569337423
+{'regressor__alpha': 100},-20.311672975107832
+{'regressor__alpha': 0.01},-69.45748788572608
+{'regressor__alpha': 0.001},-107.05487991201737

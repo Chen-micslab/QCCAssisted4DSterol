@@ -1,0 +1,2 @@
+Trial,rmse,r2,mae,percent_madae,percent_mae,best_parameter,best_train_score
+0,16.595749429802538,0.43614546437957513,7.570347878110677,0.012197828883957505,0.033273438038243994,"{'regressor__C': 250, 'regressor__gamma': 0.0005, 'regressor__kernel': 'rbf'}",5.643009425268003
