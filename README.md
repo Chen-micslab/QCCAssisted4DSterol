@@ -11,5 +11,6 @@ The script is written on the basis of RDkit's built-in functions. The script  re
 The CCS prediction process in the paper is implemented using the scikit-learn API. It employs LASSO for feature selection and uses cross-validation to select the best hyperparameters for the SVR model.
 ## Data processing and sterol identification
 Folder structure for each sample. Demo files are available in `./Search/tissue`
-![image](https://github.com/user-attachments/assets/a78d9590-acb0-469c-a64f-7a90d45bd076)
+![image](https://github.com/user-attachments/assets/16e9d8b2-0f82-4096-a42b-b7f88223e5fc)
+
 
