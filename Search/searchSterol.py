@@ -1,20 +1,14 @@
 import pandas as pd
 import regex as re
 import numpy as np
-from emass.emass import EMass
-import json
-import os
-import math
-from Search.msdialTxtReader import msdialReader
-from utils.utils import getfilepath
 from tqdm import tqdm
 from utils.utils import *
 from typing import Union, Tuple
 import re
-import copy
 global ppm
 ppm = 1e-6
-
+from rdkit import DataStructs
+from rdkit.Chem import Chem
 
 class searchMSDIALAlignExportWithMGF:
     def __init__(self, mapFilePath: str, sterolDatabase: str, alignmentPath: str,
@@ -359,11 +353,199 @@ class searchMSDIALAlignExportWithMGF:
         resultPd.to_csv(saveReuslt, index=False)
 
 
+def getInfo(resultPath, databasePath, sampleNum=4):
+    regex = r'(LMST\d{8})'
+    (filePathList, fileNameList) = getfilepath(resultPath, '.csv')
+    filePathList_ = []
+    for filePath in filePathList:
+        if '-result' in filePath:
+            filePathList_.append(filePath)
+
+    temp = pd.DataFrame()
+    for filePath in filePathList_:
+        tissueName = os.path.basename(filePath).split('-')[0]
+        df = pd.read_csv(filePath)
+        a = df['LMID'].str.extract(regex)
+        df['LMID_Location'] = df['LMID']
+        df['LMID'] = a
+        df['From'] = tissueName
+        for mainGroup, mainGroupDf in df.groupby('LMID'):
+            if len(mainGroupDf) > 1:
+                areaList = []
+                for column in mainGroupDf.columns:
+                    if 'Area' in column and 'Average' not in column and 'Std' not in column:
+                        areaList.append(column)
+                df.loc[mainGroupDf.index, ['Average Area']] = np.mean(mainGroupDf[areaList].sum())
+                df.loc[mainGroupDf.index, ['Std Area']] = np.std(mainGroupDf[areaList].sum())
+        temp = pd.concat([temp, df])
+    temp.reset_index(drop=True, inplace=True)
+
+    allInfo = temp
+    database = pd.read_csv(databasePath)
+    for i, row in allInfo.iterrows():
+        mainStr = database.loc[database['LM_ID'] == row['LMID'], :]['MAIN_CLASS'].values[0]
+        mainName = mainStr.split(' [')[0]
+        mainIndex = mainStr.split('[')[1].split(']')[0]
+        allInfo.loc[i, 'MainName'] = mainName
+        allInfo.loc[i, 'MainIndex'] = mainIndex
+        subStr = database.loc[database['LM_ID'] == row['LMID'], :]['SUB_CLASS'].values[0]
+        subName = subStr.split(' [')[0]
+        subIndex = subStr.split('[')[1].split(']')[0]
+        allInfo.loc[i, 'SubName'] = subName
+        allInfo.loc[i, 'SubIndex'] = subIndex
+        allInfo.loc[i, 'Name'] = database.loc[database['LM_ID'] == row['LMID'], :]['NAME'].values[0]
+        allInfo.loc[i, 'SYNONYMS'] = database.loc[database['LM_ID'] == row['LMID'], :]['SYNONYMS'].values[0]
+        allInfo.loc[i, 'SMILES'] = database.loc[database['LM_ID'] == row['LMID'], :]['SMILES'].values[0]
+        allInfo.loc[i, 'Mass'] = database.loc[database['LM_ID'] == row['LMID'], :]['EXACT_MASS'].values[0]
+        allInfo.loc[i, 'KEGG_ID'] = database.loc[database['LM_ID'] == row['LMID'], :]['KEGG_ID'].values[0]
+        allInfo.loc[i, 'HMDB_ID'] = database.loc[database['LM_ID'] == row['LMID'], :]['HMDB_ID'].values[0]
+
+    regex = 'chain'
+    allInfo.loc[:,'Chain'] = allInfo.loc[:,"LMID_Location"].str.contains(regex)
+    allInfo.to_csv('AllInfo_verbose.csv', index=False)
+    allInfo = allInfo.loc[:,['LMID','From','MainIndex','SubIndex','LMID_Location','SubName', 'MainName','Chain']]
+    allInfo.to_csv('AllInfo.csv', index=False)
+
+
+    temp = pd.DataFrame()
+    for tissue, tissuePd in allInfo.groupby('From'):
+        tissuePd.drop_duplicates(subset='LMID', inplace=True)
+        temp = pd.concat([tissuePd,temp])
+    temp.to_csv('AllInfo_DropDuplicates.csv', index=False)
+    identificationInfoColumns = ['LMID', 'SubName', 'MainName', 'MainIndex', 'SubIndex']
+    dropDuplicateLMIDDf = allInfo.drop_duplicates(subset='LMID')[identificationInfoColumns]
+    dropDuplicateLMIDDf = dropDuplicateLMIDDf.reset_index(drop=True)
+    print(f'All identified st number is {len(dropDuplicateLMIDDf)}')
+    mainClassNum = dropDuplicateLMIDDf['MainName'].value_counts()
+    print(f'All identified st main class type number is {len(mainClassNum)}')
+    subClassNum = dropDuplicateLMIDDf['SubName'].value_counts()
+    print(f'All identified st sub class type number is {len(subClassNum)}')
+
+    i = 0
+    classDf = pd.DataFrame(columns=['Main', 'Sub', 'Num'])
+    for mainGroup, mainGroupDf in dropDuplicateLMIDDf.groupby('MainName'):
+        print(f'main name {mainGroup}, {len(mainGroupDf)}')
+        for key in mainGroupDf.groupby('SubName').groups.keys():
+            print(key, len(dropDuplicateLMIDDf.groupby('SubName').groups[key]))
+            classDf.loc[i, 'Main'] = mainGroup
+            classDf.loc[i, 'Sub'] = key
+            classDf.loc[i, 'Num'] = len(dropDuplicateLMIDDf.groupby('SubName').groups[key])
+            i += 1
+    classDf.to_csv('Summury.csv')
+
+    import copy
+    origin = copy.deepcopy(allInfo)
+    regex = r'(LMST\d{8})'
+    a = allInfo['LMID'].str.extract(regex)
+    allInfo['LMID'] = a
+    allInfo.drop_duplicates(subset='LMID', keep='first', inplace=True)
+    df = pd.DataFrame(index=list(set(allInfo['LMID'].values)),columns=list(set(allInfo['From'].values)))
+    for tissue,group in origin.groupby('From'):
+        regex = r'(LMST\d{8})'
+        a = origin['LMID'].str.extract(regex)
+        group['LMID'] = a
+        group.drop_duplicates(subset='LMID',keep='first',inplace=True)
+        for i, row in group.iterrows():
+            df.loc[row['LMID'],row['From']] = True
+
+    df.T.to_csv('2.csv')
+    df = df.fillna(False)
+    df.to_csv('upset.csv')
+    tissue_name_dict = {'B': 'brain',
+                        'C': 'heart',
+                        'F': 'intestinal\ncontent',
+                        'G': 'intestine',
+                        'H': 'liver',
+                        'K': 'kidney',
+                        'L': 'lung'}
+    df = df.rename(columns=tissue_name_dict)
+    df = df[['brain','heart','lung','liver','kidney','intestine','intestinal\ncontent']]
+
+    df = df.reset_index()
+    df = df.set_index(['brain','heart','lung','liver','kidney','intestine','intestinal\ncontent'])
+
+
+
+
+    # neibiao = {'B':1732578,'C':1689181, 'F':3242672, 'H':1111669,'L':692416,'G':799519,'K':1107358}
+    neibiao = {'B': 1720405, 'C': 7785036, 'F': 14713725, 'H': 5087298, 'L': 3496705, 'G': 3661666, 'K': 5106132}
+    allinfo = pd.read_csv('./AllInfo_verbose.csv')
+    quantifyPd = pd.read_csv('../quantify_formula.csv', index_col=0)
+    quantifyMol = [AllChem.GetMorganFingerprint(Chem.MolFromSmiles(x), 2) for x in quantifyPd['SMILES']]
+    for i, row in allinfo.iterrows():
+        fp = AllChem.GetMorganFingerprint(Chem.MolFromSmiles(row['SMILES']), 2)
+        c = [DataStructs.DiceSimilarity(x, fp) for x in quantifyMol]
+        max_index = [index for (index,value) in enumerate(c) if value == max(c)]
+        # max_index, max_value = max(enumerate(c), key=lambda x: x[1])
+        name = list(set(list(quantifyPd.index[max_index])))[0]
+        print(name)
+        allinfo.loc[i, 'Ref Mol'] = name
+        allinfo.loc[i, 'Similarity'] = max(c)
+        matchQPd = quantifyPd.loc[quantifyPd.index.isin(list(quantifyPd.index[max_index]))]
+        # print(f'{row["LMID"]},{name}')
+        fold = row['Area_mean'] / neibiao[row['From']]
+        fold = round(fold, 4)
+        allinfo.loc[i, 'fold'] = fold
+        stdfold = row['Area_std'] / neibiao[row['From']]
+        stdfold = round(stdfold, 4)
+        for _, row_ in matchQPd.iterrows():
+            if row_['low'] < fold < row_['high']:
+                k = row_['k']
+                b = row_['b']
+                print(fold, stdfold)
+                mol = (fold - b) / k
+                stdMol = (stdfold - b) / k
+                allinfo.loc[i, 'nmol/ml'] = mol
+                allinfo.loc[i, 'std nmol/ml'] = mol * stdfold / fold
+                allinfo.loc[i, 'ng/mg'] = mol * row['Mass'] * 0.2 / 5
+                allinfo.loc[i, 'std ng/mg'] = mol * row['Mass'] * 0.2 / 5 * stdfold / fold
+            else:
+                print('No')
+    allinfo.to_csv('./allinfowithquan.csv')
+
+    from_quan_pd = pd.DataFrame(index=allInfo['LMID'],columns=list(tissue_name_dict.keys())+['SMILES'])
+    for i,row in allinfo.iterrows():
+        LMID = row['LMID']
+        SMILES = row['SMILES']
+        mean = round(row['ng/mg'],2)
+        std = round(row['std ng/mg'],2)
+        concentrate = f'{mean}±{std}'
+        from_quan_pd.loc[LMID,row['From']] = concentrate
+        from_quan_pd.loc[LMID,'SMILES'] = SMILES
+        print()
+    from_quan_pd.to_csv('from.csv')
+
+    allinfo = pd.read_csv('./allinfowithquan.csv')
+    eventDf = pd.DataFrame()
+
+    allinfo1 = allinfo.loc[:,['LMID','From','MainIndex','SubIndex','LMID_Location','SubName', 'MainName','Chain',
+                              'Ref Mol', 'IsStandard','Similarity','ng/mg']]
+    # allinfo1.drop_duplicates(subset='LMID',inplace=True)
+    allinfo1.to_csv('AllInfoRef.csv', index=False)
+
+    for tissue,group in allinfo1.groupby('From'):
+        regex = r'(LMST\d{8})'
+        a = origin['LMID'].str.extract(regex)
+        group['LMID'] = a
+        group.drop_duplicates(subset='LMID',keep='first',inplace=True)
+        for i, row in group.iterrows():
+            df.loc[row['LMID'],row['From']] = True
+
+
+
+    LMID_list = []
+    for LMID,subGroupDf in allinfo.groupby('LMID'):
+        subGroupDf.drop_duplicates(subset='From',inplace=True)
+        if len(subGroupDf) >= 7:
+            print(LMID)
+            LMID_list.append(LMID)
+    a = allinfo.loc[allinfo['LMID'].isin(LMID_list)]
+    a.to_csv('AllInfoALLHas.csv', index=False)
+
 
 if __name__ == '__main__':
     nameDict = {'B': ['brain', 1], 'F': ['feces', 1], 'C': ['cardiac', 2], 'K': ['kidney', 3], 'G': ['gut', 2],
                 'H': ['hepar', 3], 'L': ['lungs', 2]}
-    nameDict = {'C': ['cardiac', 2]}
     # for key in nameDict.keys():
     #     print(key)
     #     txtMapFolder = f"./tissue/{nameDict[key][0]}/MAP"
@@ -395,35 +577,36 @@ if __name__ == '__main__':
     #     temp.loc[rtIndexId[i]:,:].loc[:, ['Area_std']] = temp.loc[rtIndexId[i], 'Area_std_']
     #     print()
     #     temp.to_csv(f'./tissue/{nameDict[key][0]}/alignment/{key}.txt',index=0,sep='\t')
-    for key in nameDict.keys():
-        txtMapFolder = f"./tissue/{nameDict[key][0]}/MAP"
-        mgfExportFolder = f"./tissue/{nameDict[key][0]}/DAExport"
-        alignmentFolder = f'./tissue/{nameDict[key][0]}/alignment'
-        searchData = searchMSDIALAlignExportWithMGF(mapFilePath=txtMapFolder,
-                                                    alignmentPath=f'./tissue/{nameDict[key][0]}\\alignment\\{key}.txt',
-                                                    sterolDatabase=f'../Search\\database\\STDatabaseQC{nameDict[key][1]}.csv',
-                                                    mgfExportPath=mgfExportFolder,
-                                                    msTolerance=25e-6, msmsTolerance=25e-6,
-                                                    piecewiseRTAscendingRange=[(0, 4), (0, 0)],
-                                                    piecewiseCCSAscendingRange=[(0, 1.5), (0, 0)],
-                                                    )
-        searchData.match_sterol(searchWhich=searchData.standardSTDatabasePd, weight=[0, 0.5, 0.5], tolerance=0)
-        searchData.saveResult(appendStr='standard')
-        del searchData
-    #
-        searchData = searchMSDIALAlignExportWithMGF(mapFilePath=txtMapFolder,
-                                                    alignmentPath=f'./tissue/{nameDict[key][0]}\\alignment\\{key}.txt',
-                                                    sterolDatabase=f'../Search\\database\\STDatabaseQC{nameDict[key][1]}.csv',
-                                                    mgfExportPath=mgfExportFolder,
-                                                    msTolerance=25e-6, msmsTolerance=25e-6,
-                                                    piecewiseRTAscendingRange=[(0, 0), (84*0.5,84*2)],
-                                                    piecewiseCCSAscendingRange=[(1.44*0.5, 1.44*2), (0, 0)],
-                                                    )
-    #
-        searchData.match_sterol(searchWhich=searchData.predSTDatabasePd, weight=[0.4, 0.2, 0.4])
-        searchData.saveResult(appendStr='predict')
-        searchData.merge(standardResult=f"../Search/{key}.txt_standard.csv"
-                         , predictResult=f"../Search/{key}.txt_predict.csv",
-                         saveReuslt=f'./result/{key}-result.csv')
-
+    # for key in nameDict.keys():
+    #     txtMapFolder = f"./tissue/{nameDict[key][0]}/MAP"
+    #     mgfExportFolder = f"./tissue/{nameDict[key][0]}/DAExport"
+    #     alignmentFolder = f'./tissue/{nameDict[key][0]}/alignment'
+    #     searchData = searchMSDIALAlignExportWithMGF(mapFilePath=txtMapFolder,
+    #                                                 alignmentPath=f'./tissue/{nameDict[key][0]}\\alignment\\{key}.txt',
+    #                                                 sterolDatabase=f'../Search\\database\\STDatabaseQC{nameDict[key][1]}.csv',
+    #                                                 mgfExportPath=mgfExportFolder,
+    #                                                 msTolerance=25e-6, msmsTolerance=25e-6,
+    #                                                 piecewiseRTAscendingRange=[(0, 4), (0, 0)],
+    #                                                 piecewiseCCSAscendingRange=[(0, 1.5), (0, 0)],
+    #                                                 )
+    #     searchData.match_sterol(searchWhich=searchData.standardSTDatabasePd, weight=[0, 0.5, 0.5], tolerance=0)
+    #     searchData.saveResult(appendStr='standard')
+    #     del searchData
+    # #
+    #     searchData = searchMSDIALAlignExportWithMGF(mapFilePath=txtMapFolder,
+    #                                                 alignmentPath=f'./tissue/{nameDict[key][0]}\\alignment\\{key}.txt',
+    #                                                 sterolDatabase=f'../Search\\database\\STDatabaseQC{nameDict[key][1]}.csv',
+    #                                                 mgfExportPath=mgfExportFolder,
+    #                                                 msTolerance=25e-6, msmsTolerance=25e-6,
+    #                                                 piecewiseRTAscendingRange=[(0, 0), (84*0.5,84*2)],
+    #                                                 piecewiseCCSAscendingRange=[(1.44*0.5, 1.44*2), (0, 0)],
+    #                                                 )
+    # #
+    #     searchData.match_sterol(searchWhich=searchData.predSTDatabasePd, weight=[0.4, 0.2, 0.4])
+    #     searchData.saveResult(appendStr='predict')
+    #     searchData.merge(standardResult=f"../Search/{key}.txt_standard.csv"
+    #                      , predictResult=f"../Search/{key}.txt_predict.csv",
+    #                      saveReuslt=f'./result/{key}-result.csv')
+    getInfo(resultPath='./result',
+            databasePath='../database/2_STWithDoubleBond.csv')
 

@@ -1,7 +1,6 @@
 from typing import List, Union
 import os
 import math
-from rdkit import Chem
 import spectral_similarity
 import numpy as np
 
