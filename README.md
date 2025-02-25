@@ -4,6 +4,7 @@
 1. MS/MS calculations for N-Me derived unsaturated sterol lipids
 2. QCC-Assited dataset CCS prediction workflow of N-Me derived unsaturated sterol lipids.
 3. LC-IM-MS/MS based 4D streolomics data processing and identification.
+
 All functions are implemented in jupyter notebook
 ## MS/MS calculation
 The script is written on the basis of RDkit's built-in functions. The script  recognises double bond positions and generates MS/MS based on N-Me fragmentation patterns. Theoretically applicable to all molecules including C=C bond  (only test sterol lipids).
