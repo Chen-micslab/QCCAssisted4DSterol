@@ -10,7 +10,10 @@ The script is written on the basis of RDkit's built-in functions. The script  re
 ## Training CCS Predicition Model
 The CCS prediction process in the paper is implemented using the scikit-learn API. It employs LASSO for feature selection and uses cross-validation to select the best hyperparameters for the SVR model.
 ## Data processing and sterol identification
-Folder structure for each sample. Demo files are available in `./Search/tissue`
+Folder structure for each sample. All sample files are available in `./Search/tissue`
 ![image](https://github.com/user-attachments/assets/16e9d8b2-0f82-4096-a42b-b7f88223e5fc)
+## GNN RT prediction
+The RT prediction process references the ”Retention Time Prediction through Learning from a Small Training Data Set with a Pretrained Graph Neural Network“.The code can be found at [Github](https://github.com/seokhokang/retention_time_gnn/)
+
 
 
