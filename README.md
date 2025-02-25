@@ -14,7 +14,7 @@ The CCS prediction process in the paper is implemented using the scikit-learn AP
 Folder structure for each sample. All sample files are available in `./Search/tissue`
 ![image](https://github.com/user-attachments/assets/16e9d8b2-0f82-4096-a42b-b7f88223e5fc)
 ## GNN RT prediction
-The RT prediction process references the ”Retention Time Prediction through Learning from a Small Training Data Set with a Pretrained Graph Neural Network“.The code can be found at [Github](https://github.com/seokhokang/retention_time_gnn/)
+The RT prediction process referenced the ”Retention Time Prediction through Learning from a Small Training Data Set with a Pretrained Graph Neural Network“.The code can be found at [Github](https://github.com/seokhokang/retention_time_gnn/)
 
 
 
